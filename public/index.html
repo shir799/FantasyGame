@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>ASCHENTHRON</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2307090f'/><path d='M8 2 L10 7 L8 14 L6 7 Z' fill='%23c98a3d'/></svg>">
+  <script type="importmap">{"imports":{"three":"/vendor/three/three.module.js","three/addons/":"/vendor/three/addons/"}}</script>
+  <link rel="stylesheet" href="/css/ui.css">
+</head>
+<body data-screen="menu">
+
+  <canvas id="game-canvas"></canvas>
+
+  <!-- ============ MENÜ ============ -->
+  <section id="screen-menu" class="screen screen-center">
+    <div class="menu-wrap">
+      <header class="game-title">
+        <h1>ASCHENTHRON</h1>
+        <p class="subtitle">1v1 Arena-Duell</p>
+      </header>
+
+      <div class="panel menu-panel">
+        <label class="field">
+          <span class="field-label">Dein Name</span>
+          <input id="menu-name" type="text" maxlength="16" placeholder="Namenlos" autocomplete="off" spellcheck="false" data-setting="name">
+        </label>
+        <button id="btn-enter" class="btn btn-primary btn-large">Arena betreten</button>
+      </div>
+
+      <div class="menu-columns">
+        <div class="panel menu-col">
+          <h3 class="panel-title">Steuerung</h3>
+          <table class="controls-table">
+            <tbody>
+              <tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd></td><td>Bewegung</td></tr>
+              <tr><td><kbd>Leertaste</kbd></td><td>Springen</td></tr>
+              <tr><td><kbd>Umschalt</kbd></td><td>Sprinten</td></tr>
+              <tr><td><kbd>LMB</kbd></td><td>Primärangriff</td></tr>
+              <tr><td><kbd>RMB</kbd></td><td>Sekundärangriff</td></tr>
+              <tr><td><kbd>Q</kbd></td><td>Fähigkeit 1</td></tr>
+              <tr><td><kbd>E</kbd></td><td>Fähigkeit 2</td></tr>
+              <tr><td><kbd>R</kbd></td><td>Ultimative Fähigkeit</td></tr>
+              <tr><td><kbd>Esc</kbd></td><td>Pause</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel menu-col">
+          <h3 class="panel-title">Einstellungen</h3>
+          <div class="settings">
+            <label class="setting-row">
+              <span class="setting-label">Empfindlichkeit</span>
+              <input type="range" min="0.3" max="2.5" step="0.05" data-setting="sensitivity">
+              <output data-setting-out="sensitivity">1.00</output>
+            </label>
+            <label class="setting-row">
+              <span class="setting-label">Qualität</span>
+              <select data-setting="quality">
+                <option value="low">Niedrig</option>
+                <option value="medium">Mittel</option>
+                <option value="high">Hoch</option>
+              </select>
+              <output></output>
+            </label>
+            <label class="setting-row">
+              <span class="setting-label">Lautstärke</span>
+              <input type="range" min="0" max="1" step="0.05" data-setting="volume">
+              <output data-setting-out="volume">80%</output>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOBBY ============ -->
+  <section id="screen-lobby" class="screen screen-center" hidden>
+    <div class="panel lobby-panel">
+      <div class="spinner" aria-hidden="true"></div>
+      <h2 class="lobby-title">Warte auf Herausforderer &hellip;</h2>
+      <p class="lobby-hint">Spieler 2 öffnet im Browser:</p>
+      <div class="join-row">
+        <code id="join-url" title="Klicken zum Kopieren">&hellip;</code>
+        <button id="btn-copy" class="btn btn-ghost btn-small">Kopieren</button>
+      </div>
+      <div class="divider"></div>
+      <button id="btn-solo" class="btn btn-ghost">Solo-Training mit Übungsgolem</button>
+    </div>
+  </section>
+
+  <!-- ============ KLASSENWAHL ============ -->
+  <section id="screen-class" class="screen screen-center" hidden>
+    <div class="class-wrap">
+      <h2 class="screen-heading">Wähle deinen Kämpfer</h2>
+      <div id="class-cards" class="class-cards"></div>
+      <div class="class-footer">
+        <p id="class-enemy-status" class="enemy-status">Warte auf Gegner &hellip;</p>
+        <button id="btn-ready" class="btn btn-primary btn-large" disabled>Bereit</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HUD ============ -->
+  <section id="screen-hud" class="screen" hidden>
+    <!-- Runden-Pips + Timer oben -->
+    <div class="topbar">
+      <div id="pips-mine" class="pips"></div>
+      <div class="timer-block">
+        <div id="hud-timer" class="timer" hidden>1:30</div>
+        <div id="hud-round" class="round-label"></div>
+      </div>
+      <div id="pips-theirs" class="pips pips-theirs"></div>
+    </div>
+
+    <!-- Gegner-Leiste oben mittig -->
+    <div id="enemy-bar" class="enemy-bar inactive">
+      <div class="enemy-meta">
+        <span id="enemy-name">&mdash;</span>
+        <span id="enemy-class" class="enemy-class"></span>
+      </div>
+      <div class="bar enemy-track">
+        <div id="enemy-hp" class="bar-fill enemy-fill"></div>
+        <div id="enemy-shield" class="bar-shield"></div>
+      </div>
+    </div>
+
+    <!-- Eigene HP unten links -->
+    <div class="my-bar">
+      <div class="my-numbers">
+        <span id="my-hp-num">100</span><span id="my-max-num" class="max-num">/ 100</span>
+        <span id="my-shield-num" class="shield-num" hidden>+0</span>
+      </div>
+      <div class="bar my-track">
+        <div id="my-hp" class="bar-fill my-fill"></div>
+        <div id="my-shield" class="bar-shield"></div>
+      </div>
+    </div>
+
+    <!-- Ability-Slots unten mittig -->
+    <div class="hud-slots-wrap">
+      <div id="hud-meter" class="hud-meter" data-kind="charge" hidden>
+        <div id="hud-meter-label" class="hud-meter-label">Aufladung</div>
+        <div class="hud-meter-track"><div id="hud-meter-fill" class="hud-meter-fill"></div></div>
+      </div>
+      <div id="hud-slots" class="hud-slots"></div>
+    </div>
+
+    <!-- Crosshair (Klassen-Varianten via data-class) -->
+    <div id="crosshair" class="crosshair" data-class="">
+      <span class="ch-a"></span><span class="ch-b"></span>
+      <span class="ch-c"></span><span class="ch-d"></span>
+      <span class="ch-dot"></span>
+    </div>
+
+    <!-- Treffer-/Schadens-Feedback -->
+    <div id="damage-vignette" aria-hidden="true"></div>
+    <div id="low-hp" aria-hidden="true"></div>
+    <div id="dmg-dir" aria-hidden="true"><div class="dmg-dir-seg"></div></div>
+    <div id="hitmarker" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <div id="dmg-numbers" aria-hidden="true"></div>
+
+    <!-- Ansagen + Countdown -->
+    <div id="announce" class="announce" hidden>
+      <div id="announce-text"></div>
+      <div id="announce-sub"></div>
+    </div>
+    <div id="countdown" class="countdown" hidden>3</div>
+  </section>
+
+  <!-- ============ PAUSE ============ -->
+  <section id="screen-pause" class="screen screen-center screen-pause" hidden>
+    <div class="panel pause-panel">
+      <h2 class="screen-heading small">Pause</h2>
+      <button id="btn-resume" class="btn btn-primary btn-large">Fortsetzen</button>
+      <div class="divider"></div>
+      <h3 class="panel-title">Einstellungen</h3>
+      <div class="settings">
+        <label class="setting-row">
+          <span class="setting-label">Empfindlichkeit</span>
+          <input type="range" min="0.3" max="2.5" step="0.05" data-setting="sensitivity">
+          <output data-setting-out="sensitivity">1.00</output>
+        </label>
+        <label class="setting-row">
+          <span class="setting-label">Qualität</span>
+          <select data-setting="quality">
+            <option value="low">Niedrig</option>
+            <option value="medium">Mittel</option>
+            <option value="high">Hoch</option>
+          </select>
+          <output></output>
+        </label>
+        <label class="setting-row">
+          <span class="setting-label">Lautstärke</span>
+          <input type="range" min="0" max="1" step="0.05" data-setting="volume">
+          <output data-setting-out="volume">80%</output>
+        </label>
+      </div>
+      <div class="divider"></div>
+      <button id="btn-pause-leave-solo" class="btn btn-ghost danger" hidden>Training beenden</button>
+      <button id="btn-pause-leave" class="btn btn-ghost danger">Verlassen</button>
+    </div>
+  </section>
+
+  <!-- ============ ERGEBNIS ============ -->
+  <section id="screen-result" class="screen screen-center" hidden>
+    <div class="result-wrap">
+      <h1 id="result-title" class="result-title victory">SIEG</h1>
+      <div id="result-score" class="result-score">0&nbsp;:&nbsp;0</div>
+      <div class="result-actions">
+        <button id="btn-rematch" class="btn btn-primary btn-large">Revanche</button>
+        <button id="btn-result-solo" class="btn btn-ghost" hidden>Solo-Training</button>
+      </div>
+      <p id="rematch-hint" class="rematch-hint" hidden>Warte auf Gegner &hellip;</p>
+    </div>
+  </section>
+
+  <!-- ============ VERBINDUNG GETRENNT ============ -->
+  <section id="screen-disconnected" class="screen screen-center" hidden>
+    <div class="panel disc-panel">
+      <h2 class="screen-heading small blood">Verbindung verloren</h2>
+      <p class="disc-text">Die Verbindung zur Arena wurde getrennt.</p>
+      <button id="btn-reconnect" class="btn btn-primary btn-large">Neu verbinden</button>
+    </div>
+  </section>
+
+  <!-- Toasts (über allen Screens) -->
+  <div id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

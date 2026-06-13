@@ -1,0 +1,24 @@
+{
+  "name": "aschenthron-arena",
+  "version": "0.1.0",
+  "description": "ASCHENTHRON — 1v1 Dark-Fantasy-Arena-Duell für zwei Macs im lokalen Netzwerk (Three.js + WebSocket)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "bot": "node test/bot.js",
+    "smoke": "node test/smoke.mjs",
+    "check": "node --check server/server.js && node --check test/bot.js && node --check shared/protocol.js && node --check shared/classes.js && node test/check-bundle.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "three": "^0.182.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "puppeteer-core": "^25.1.0"
+  }
+}
